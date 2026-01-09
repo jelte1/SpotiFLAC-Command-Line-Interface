@@ -135,22 +135,16 @@ class TidalDownloader:
 
     @staticmethod
     def get_available_apis() -> List[str]:
-        try:
-            
-            url = "https://raw.githubusercontent.com/afkarxyz/SpotiFLAC/refs/heads/main/tidal.json"
-
-            headers = {
-                "Cache-Control": "no-cache, no-store, must-revalidate",
-                "Pragma": "no-cache",
-                "Expires": "0",
-            }
-            response = requests.get(url, headers=headers, timeout=10)
-            response.raise_for_status()
-            api_list = response.json()
-            return [f"https://{api}" for api in api_list]
-        except Exception as exc:
-            print(f"Failed to fetch API list: {exc}")
-            return []
+        return [
+            base64.b64decode("aHR0cHM6Ly92b2dlbC5xcWRsLnNpdGU=").decode('utf-8'),
+            base64.b64decode("aHR0cHM6Ly9tYXVzLnFxZGwuc2l0ZQ==").decode('utf-8'),
+            base64.b64decode("aHR0cHM6Ly9odW5kLnFxZGwuc2l0ZQ==").decode('utf-8'),
+            base64.b64decode("aHR0cHM6Ly9ldS1tYXVzLnFxZGwuc2l0ZQ==").decode('utf-8'),
+            base64.b64decode("aHR0cHM6Ly9ldS1rYXR6ZS5xcWRsLnNpdGU=").decode('utf-8'),
+            base64.b64decode("aHR0cHM6Ly9rYXR6ZS5xcWRsLnNpdGU=").decode('utf-8'),
+            base64.b64decode("aHR0cHM6Ly93b2xmLnFxZGwuc2l0ZQ==").decode('utf-8'),
+            base64.b64decode("aHR0cHM6Ly90aWRhbC5raW5vcGx1cy5vbmxpbmU=").decode('utf-8')
+        ]
 
     def get_access_token(self) -> Optional[str]:
         data = f"client_id={self.client_id}&grant_type=client_credentials"
