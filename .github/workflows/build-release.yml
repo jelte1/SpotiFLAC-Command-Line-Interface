@@ -37,15 +37,25 @@ jobs:
         python -m pip install --upgrade pip
         pip install pyinstaller certifi requests mutagen
 
-    - name: Build executable (Windows)
-      if: matrix.os == 'windows-latest'
+    - name: Fix relative imports for standalone build
+      shell: bash
       run: |
-        pyinstaller --onefile --name ${{ matrix.build_name }} --console --hidden-import=amazonDL --hidden-import=deezerDL --hidden-import=getMetadata --hidden-import=qobuzDL --hidden-import=tidalDL --hidden-import=certifi --collect-data=certifi spotiflac/SpotiFLAC.py
+        cd spotiflac
+        for file in *.py; do
+          if [ -f "$file" ]; then
+            sed -i.bak 's/from \. import /import /g' "$file" 2>/dev/null || sed -i '' 's/from \. import /import /g' "$file" 2>/dev/null || true
+            sed -i.bak 's/from \.\([a-zA-Z]\)/from \1/g' "$file" 2>/dev/null || sed -i '' 's/from \.\([a-zA-Z]\)/from \1/g' "$file" 2>/dev/null || true
+            rm -f "$file.bak"
+          fi
+        done
 
-    - name: Build executable (macOS/Linux)
-      if: matrix.os != 'windows-latest'
+    - name: Build executable
+      shell: bash
       run: |
-        pyinstaller --onefile --name ${{ matrix.build_name }} --console \
+        cd spotiflac
+        pyinstaller --onefile \
+          --name "${{ matrix.build_name }}" \
+          --console \
           --hidden-import=amazonDL \
           --hidden-import=deezerDL \
           --hidden-import=getMetadata \
@@ -53,26 +63,36 @@ jobs:
           --hidden-import=tidalDL \
           --hidden-import=certifi \
           --collect-data=certifi \
-          spotiflac/SpotiFLAC.py
+          SpotiFLAC.py
 
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.build_name }}
-        path: dist/${{ matrix.artifact_name }}
+        path: spotiflac/dist/${{ matrix.artifact_name }}
 
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
-        files: dist/${{ matrix.artifact_name }}
+        files: spotiflac/dist/${{ matrix.artifact_name }}
         draft: false
         prerelease: false
         body: |
-          ## Download for platforms:
+          ## Download for your platform:
           
           - **Windows**: SpotiFLAC-Windows.exe
           - **macOS**: SpotiFLAC-macOS (run `chmod +x SpotiFLAC-macOS` first)
           - **Linux**: SpotiFLAC-Linux (run `chmod +x SpotiFLAC-Linux` first)
+          
+          ### Usage
+          ```bash
+          # Windows
+          SpotiFLAC-Windows.exe --service tidal [spotify_url] ./output
+          
+          # macOS/Linux (make executable first)
+          chmod +x SpotiFLAC-macOS  # or SpotiFLAC-Linux
+          ./SpotiFLAC-macOS --service tidal [spotify_url] ./output
+          ```
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
