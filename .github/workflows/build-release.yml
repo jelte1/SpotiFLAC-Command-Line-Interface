@@ -62,7 +62,7 @@ jobs:
           --hidden-import=tidalDL \
           --hidden-import=certifi \
           --collect-data=certifi \
-          SpotiFLAC.py
+          spotiflac/SpotiFLAC.py
 
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v4
