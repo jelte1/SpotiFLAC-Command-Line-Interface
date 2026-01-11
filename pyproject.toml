@@ -1,0 +1,14 @@
+[project]
+name = "spotiflac"
+version = "0.1.0"
+description = "SpotiFLAC module for Python"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+  { name="Shu" }
+]
+license = {text = "MIT"}
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

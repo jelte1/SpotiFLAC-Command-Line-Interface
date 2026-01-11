@@ -1,0 +1,29 @@
+name: Publish to PyPI
+
+on:
+  push:
+    branches: ["module"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Publish package to PyPI
+        if: startsWith(github.ref, 'refs/heads/module')
+        run: twine upload dist/* -u __token__ -p "${{ secrets.PYPI_API_TOKEN }}"
