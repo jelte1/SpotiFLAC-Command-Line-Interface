@@ -63,7 +63,7 @@ jobs:
           --hidden-import=tidalDL \
           --hidden-import=certifi \
           --collect-data=certifi \
-          __init__.py
+          launcher.py
 
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v4
