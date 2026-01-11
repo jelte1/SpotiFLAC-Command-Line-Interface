@@ -17,7 +17,7 @@ Specify the duration in minutes to keep retrying downloads in case of failures. 
 <h3>Usage (as Module)</h3>
 
 ```bash
-from spotiFLAC import spotiflac
+from spotiFLAC import SpotiFLAC
 
 spotiflac(
     url,
@@ -34,7 +34,7 @@ spotiflac(
 <h3>Example (Module Usage)</h3>
 
 ```bash
-from spotiFLAC import spotiflac
+from spotiFLAC import SpotiFLAC
 
 spotiflac(
     url="https://open.spotify.com/album/xyz",

@@ -5,11 +5,11 @@ import argparse
 import asyncio
 
 from dataclasses import dataclass
-from spotiflac.getMetadata import get_filtered_data, parse_uri, SpotifyInvalidUrlException
-from spotiflac.tidalDL import TidalDownloader
-from spotiflac.deezerDL import DeezerDownloader
-from spotiflac.qobuzDL import QobuzDownloader
-from spotiflac.amazonDL import AmazonDownloader
+from SpotiFLAC.getMetadata import get_filtered_data, parse_uri, SpotifyInvalidUrlException
+from SpotiFLAC.tidalDL import TidalDownloader
+from SpotiFLAC.deezerDL import DeezerDownloader
+from SpotiFLAC.qobuzDL import QobuzDownloader
+from SpotiFLAC.amazonDL import AmazonDownloader
 
 @dataclass
 class Config:
@@ -515,7 +515,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def spotiflac(
+def SpotiFLAC(
     url: str,
     output_dir: str,
     services=["tidal", "deezer", "qobuz", "amazon"],
@@ -546,4 +546,4 @@ def spotiflac(
 
 def main():
     args = parse_args()
-    spotiflac(args.url, args.output_dir, args.services)
+    SpotiFLAC(args.url, args.output_dir, args.services)

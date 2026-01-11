@@ -33,7 +33,7 @@ def parse_args():
 
 # Now import and run the main SpotiFLAC module
 if __name__ == '__main__':
-    from spotiflac.SpotiFLAC import spotiflac
+    from SpotiFLAC.SpotiFLAC import SpotiFLAC
 
     args = parse_args()
-    spotiflac(args.url, args.output_dir, args.service, args.filename_format, args.use_track_numbers, args.use_artist_subfolders, args.use_album_subfolders, args.loop)
+    SpotiFLAC(args.url, args.output_dir, args.service, args.filename_format, args.use_track_numbers, args.use_artist_subfolders, args.use_album_subfolders, args.loop)
