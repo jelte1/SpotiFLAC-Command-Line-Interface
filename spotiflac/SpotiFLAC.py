@@ -5,11 +5,11 @@ import argparse
 import asyncio
 
 from dataclasses import dataclass
-from .getMetadata import get_filtered_data, parse_uri, SpotifyInvalidUrlException
-from .tidalDL import TidalDownloader
-from .deezerDL import DeezerDownloader
-from .qobuzDL import QobuzDownloader
-from .amazonDL import AmazonDownloader
+from spotiflac.getMetadata import get_filtered_data, parse_uri, SpotifyInvalidUrlException
+from spotiflac.tidalDL import TidalDownloader
+from spotiflac.deezerDL import DeezerDownloader
+from spotiflac.qobuzDL import QobuzDownloader
+from spotiflac.amazonDL import AmazonDownloader
 
 @dataclass
 class Config:
