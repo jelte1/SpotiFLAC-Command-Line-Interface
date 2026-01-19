@@ -11,12 +11,13 @@ from SpotiFLAC.deezerDL import DeezerDownloader
 from SpotiFLAC.qobuzDL import QobuzDownloader
 from SpotiFLAC.amazonDL import AmazonDownloader
 
+
 @dataclass
 class Config:
     url: str
     output_dir: str
     service: list = None
-    filename_format: str = "title_artist"
+    filename_format: str = "{title} - {artist}"
     use_track_numbers: bool = False
     use_artist_subfolders: bool = False
     use_album_subfolders: bool = False
@@ -30,6 +31,7 @@ class Config:
     start_time: float = 0.0
     end_time: float = 0.0
 
+
 @dataclass
 class Track:
     external_urls: str
@@ -40,7 +42,9 @@ class Track:
     duration_ms: int
     id: str
     isrc: str = ""
-    downloaded : bool = False
+    release_date: str = ""
+    downloaded: bool = False
+
 
 def get_metadata(url):
     try:
@@ -100,7 +104,8 @@ def handle_track_metadata(track_data):
         track_number=1,
         duration_ms=track_data.get("duration_ms", 0),
         id=track_id,
-        isrc=track_data.get("isrc", "")
+        isrc=track_data.get("isrc", ""),
+        release_date=track_data.get("release_date", "")
     )
 
     config.tracks = [track]
@@ -111,6 +116,7 @@ def handle_track_metadata(track_data):
 
 def handle_album_metadata(album_data):
     config.album_or_playlist_name = album_data["album_info"]["name"]
+    album_release_date = album_data["album_info"].get("release_date", "")
 
     for track in album_data["track_list"]:
         track_id = track["external_urls"].split("/")[-1]
@@ -126,7 +132,8 @@ def handle_album_metadata(album_data):
             track_number=track["track_number"],
             duration_ms=track.get("duration_ms", 0),
             id=track_id,
-            isrc=track.get("isrc", "")
+            isrc=track.get("isrc", ""),
+            release_date=track.get("release_date", album_release_date)
         ))
 
     config.is_album = True
@@ -150,7 +157,8 @@ def handle_playlist_metadata(playlist_data):
             track_number=track.get("track_number", len(config.tracks) + 1),
             duration_ms=track.get("duration_ms", 0),
             id=track_id,
-            isrc=track.get("isrc", "")
+            isrc=track.get("isrc", ""),
+            release_date=track.get("release_date", "")
         ))
 
     config.is_playlist = True
@@ -235,6 +243,7 @@ def format_minutes(minutes):
         mins = minutes % 60
         return f"{days} days {hours} hours {mins} minutes"
 
+
 def format_seconds(seconds: float) -> str:
     seconds = int(round(seconds))
 
@@ -255,9 +264,55 @@ def format_seconds(seconds: float) -> str:
     return " ".join(parts)
 
 
+def sanitize_filename_component(value: str) -> str:
+    """Sanitize individual filename components"""
+    if not value:
+        return ""
+    sanitized = re.sub(r'[<>:"/\\|?*]', lambda m: "'" if m.group() == '"' else '_', value)
+    sanitized = re.sub(r'\s+', ' ', sanitized).strip()
+    return sanitized
+
+
+def format_custom_filename(template: str, track, position: int = 1) -> str:
+    year = ""
+    if track.release_date:
+        year = track.release_date.split("-")[0] if "-" in track.release_date else track.release_date
+
+    duration = ""
+    if track.duration_ms:
+        total_seconds = track.duration_ms // 1000
+        minutes = total_seconds // 60
+        seconds = total_seconds % 60
+        duration = f"{minutes:02d}:{seconds:02d}"
+
+    replacements = {
+        "title": sanitize_filename_component(track.title),
+        "artist": sanitize_filename_component(track.artists),
+        "album": sanitize_filename_component(track.album),
+        "track_number": f"{track.track_number:02d}" if track.track_number else f"{position:02d}",
+        "track": f"{track.track_number:02d}" if track.track_number else f"{position:02d}",
+        "date": sanitize_filename_component(track.release_date),
+        "year": year,
+        "position": f"{position:02d}",
+        "isrc": sanitize_filename_component(track.isrc),
+        "duration": duration,
+    }
+
+    result = template
+    for key, value in replacements.items():
+        result = result.replace(f"{{{key}}}", value)
+
+    if not result.lower().endswith('.flac'):
+        result += '.flac'
+
+    result = re.sub(r'\s+', ' ', result).strip()
+
+    return result
+
+
 class DownloadWorker:
     def __init__(self, tracks, outpath, is_single_track=False, is_album=False, is_playlist=False,
-                 album_or_playlist_name='', filename_format='title_artist', use_track_numbers=True,
+                 album_or_playlist_name='', filename_format='{title} - {artist}', use_track_numbers=True,
                  use_artist_subfolders=False, use_album_subfolders=False, services=["tidal"]):
         super().__init__()
         self.tracks = tracks
@@ -273,14 +328,17 @@ class DownloadWorker:
         self.services = services
         self.failed_tracks = []
 
-    def get_formatted_filename(self, track):
-        if self.filename_format == "artist_title":
-            filename = f"{track.artists} - {track.title}.flac"
-        elif self.filename_format == "title_only":
-            filename = f"{track.title}.flac"
-        else:
-            filename = f"{track.title} - {track.artists}.flac"
-        return re.sub(r'[<>:"/\\|?*]', lambda m: "'" if m.group() == '"' else '_', filename)
+    def get_formatted_filename(self, track, position=1):
+        if self.filename_format in ["title_artist", "artist_title", "title_only"]:
+            if self.filename_format == "artist_title":
+                filename = f"{track.artists} - {track.title}.flac"
+            elif self.filename_format == "title_only":
+                filename = f"{track.title}.flac"
+            else:
+                filename = f"{track.title} - {track.artists}.flac"
+            return re.sub(r'[<>:"/\\|?*]', lambda m: "'" if m.group() == '"' else '_', filename)
+
+        return format_custom_filename(self.filename_format, track, position)
 
     def run(self):
         try:
@@ -318,12 +376,7 @@ class DownloadWorker:
                 else:
                     track_outpath = self.outpath
 
-                if (self.is_album or self.is_playlist) and self.use_track_numbers:
-                    new_filename = f"{track.track_number:02d} - {self.get_formatted_filename(track)}"
-                else:
-                    new_filename = self.get_formatted_filename(track)
-
-                new_filename = re.sub(r'[<>:"/\\|?*]', lambda m: "'" if m.group() == "\"" else "_", new_filename)
+                new_filename = self.get_formatted_filename(track, i + 1)
                 new_filepath = os.path.join(track_outpath, new_filename)
 
                 if os.path.exists(new_filepath) and os.path.getsize(new_filepath) > 0:
@@ -398,12 +451,8 @@ class DownloadWorker:
 
                         elif svc == "qobuz":
                             update_progress(f"Downloading from Qobuz with ISRC: {track.isrc}")
-                            format_map = {
-                                "title_artist": "title-artist",
-                                "artist_title": "artist-title",
-                                "title_only": "title",
-                            }
-                            qb_format = format_map.get(self.filename_format, self.filename_format.replace("_", "-"))
+
+                            qb_format = "title-artist"
                             downloaded_file = downloader.download_by_isrc(
                                 isrc=track.isrc,
                                 output_dir=track_outpath,
@@ -419,12 +468,7 @@ class DownloadWorker:
 
                         elif svc == "amazon":
                             update_progress(f"Downloading from Amazon Music for track ID: {track.id}")
-                            format_map = {
-                                "title_artist": "title-artist",
-                                "artist_title": "artist-title",
-                                "title_only": "title",
-                            }
-                            amz_format = format_map.get(self.filename_format, self.filename_format.replace("_", "-"))
+                            amz_format = "title-artist"
                             downloaded_file = downloader.download_by_spotify_id(
                                 spotify_track_id=track.id,
                                 output_dir=track_outpath,
@@ -505,10 +549,14 @@ def parse_args():
         choices=["tidal", "deezer", "qobuz", "amazon"],
         nargs="+",
         default=["tidal"],
-        help="One or more services to try in order (e.g. --service tidal deezer qobuz amazon)",
+        help="One or more services to try in order",
     )
-    parser.add_argument("--filename-format", choices=["title_artist","artist_title","title_only"], default="title_artist")
-    parser.add_argument("--use-track-numbers", action="store_true")
+    parser.add_argument(
+        "--filename-format",
+        default="{title} - {artist}",
+        help="Custom filename format using placeholders (see examples below)"
+    )
+    parser.add_argument("--use-track-numbers", action="store_true", help="(Deprecated - use {track} in format)")
     parser.add_argument("--use-artist-subfolders", action="store_true")
     parser.add_argument("--use-album-subfolders", action="store_true")
     parser.add_argument("--loop", type=int, help="Loop delay in minutes")
@@ -516,16 +564,15 @@ def parse_args():
 
 
 def SpotiFLAC(
-    url: str,
-    output_dir: str,
-    services=["tidal", "deezer", "qobuz", "amazon"],
-    filename_format="title_artist",
-    use_track_numbers=False,
-    use_artist_subfolders=False,
-    use_album_subfolders=False,
-    loop=None
+        url: str,
+        output_dir: str,
+        services=["tidal", "deezer", "qobuz", "amazon"],
+        filename_format="{title} - {artist}",
+        use_track_numbers=False,
+        use_artist_subfolders=False,
+        use_album_subfolders=False,
+        loop=None
 ):
-
     global config
     config = Config(
         url=url,
@@ -544,6 +591,20 @@ def SpotiFLAC(
     except KeyboardInterrupt:
         print("\nDownload stopped by user.")
 
+
 def main():
     args = parse_args()
-    SpotiFLAC(args.url, args.output_dir, args.services)
+    SpotiFLAC(
+        url=args.url,
+        output_dir=args.output_dir,
+        services=args.service,
+        filename_format=args.filename_format,
+        use_track_numbers=args.use_track_numbers,
+        use_artist_subfolders=args.use_artist_subfolders,
+        use_album_subfolders=args.use_album_subfolders,
+        loop=args.loop
+    )
+
+
+if __name__ == "__main__":
+    main()

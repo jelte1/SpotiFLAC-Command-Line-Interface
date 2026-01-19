@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
 """
-Launcher script for SpotiFLAC
+Launcher script for SpotiFLAC CLI
 """
 import argparse
 import sys
@@ -22,16 +21,19 @@ def parse_args():
         choices=["tidal", "deezer", "qobuz", "amazon"],
         nargs="+",
         default=["tidal"],
-        help="One or more services to try in order (e.g. --service tidal deezer qobuz amazon)",
+        help="One or more services to try in order",
     )
-    parser.add_argument("--filename-format", choices=["title_artist","artist_title","title_only"], default="title_artist")
-    parser.add_argument("--use-track-numbers", action="store_true")
+    parser.add_argument(
+        "--filename-format",
+        default="{title} - {artist}",
+        help="Custom filename format using placeholders (see examples below)"
+    )
+    parser.add_argument("--use-track-numbers", action="store_true", help="(Deprecated - use {track} in format)")
     parser.add_argument("--use-artist-subfolders", action="store_true")
     parser.add_argument("--use-album-subfolders", action="store_true")
     parser.add_argument("--loop", type=int, help="Loop delay in minutes")
     return parser.parse_args()
 
-# Now import and run the main SpotiFLAC module
 if __name__ == '__main__':
     from SpotiFLAC.SpotiFLAC import SpotiFLAC
 
