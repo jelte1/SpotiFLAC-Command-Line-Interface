@@ -3,10 +3,8 @@
 <h2>Arguments</h2>
 <i>service {tidal,qobuz,deezer,amazon}</i><br>
 Specify the music service to use for downloading FLAC files. Specify multiple services separated by spaces to try them in order. Default is 'tidal'.<br><br>
-<i>filename-format {title_artist,artist_title,title_only}</i><br>
-Specify the format for naming downloaded files. Default is 'title_artist'.<br><br>
-<i>use-track-numbers</i><br>
-Include track numbers in the filenames.<br><br>
+<i>filename-format "{title}, {artist}, {album}, {track_number}, {track}, {date}, {year}, {position}, {isrc}, {duration}"</i><br>
+Specify the format for naming downloaded files. U can customize the name by adding the options listed above. Example: --filename-format "{year} - {album}/{track}. {title} - {artist}". Default is "{title} {artist}".<br><br>
 <i>use-artist-subfolders</i><br>
 Organize downloaded files into subfolders by artist.<br><br>
 <i>use-album-subfolders</i><br>
@@ -24,7 +22,7 @@ Program can also be ran by downloading the python files and calling <code>python
 ./SpotiFLAC-Windows.exe [url]
                         [output_dir]
                         [--service tidal qobuz deezer amazon]
-                        [--filename-format {title_artist,artist_title,title_only}]
+                        [--filename-format "title, artist, album, track_number, track, date, year, position, isrc, duration"]
                         [--use-track-numbers] [--use-artist-subfolders]
                         [--use-album-subfolders]
                         [--loop minutes]
