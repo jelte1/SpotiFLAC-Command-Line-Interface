@@ -554,7 +554,7 @@ def parse_args():
     parser.add_argument(
         "--filename-format",
         default="{title} - {artist}",
-        help="Custom filename format using placeholders (see examples below)"
+        help='Custom filename format using placeholders (e.g., "{title}, {artist}, {album}, {track_number}, {date}, {year}, {isrc}, {duration}")'
     )
     parser.add_argument("--use-track-numbers", action="store_true", help="(Deprecated - use {track} in format)")
     parser.add_argument("--use-artist-subfolders", action="store_true")
