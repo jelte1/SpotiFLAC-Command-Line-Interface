@@ -1,5 +1,5 @@
 <h1>SpotiFLAC-Command-Line-Interface</h1>
-<p>Command Line Interface version of SpotiFLAC.<br> Also available as a python module.</p>
+<p>Command Line Interface version of SpotiFLAC. Download your Spotify playlists or albums via the CLI for Windows, Linux and Mac. Perfect for headless servers and automation scripts to keep your music library synced and updated. <br> Also available as a python module.</p>
 <h2>Arguments</h2>
 <i>service {tidal,qobuz,deezer,amazon}</i><br>
 Specify the music service to use for downloading FLAC files. Specify multiple services separated by spaces to try them in order. Default is 'tidal'.<br><br>
