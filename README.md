@@ -1,83 +1,65 @@
-<h1>SpotiFLAC-Command-Line-Interface</h1>
-<p>Command Line Interface version of SpotiFLAC. Download your Spotify playlists or albums via the CLI for Windows, Linux and Mac. Perfect for headless servers and automation scripts to keep your music library synced and updated. <br> Also available as a python module.</p>
-<h2>Arguments</h2>
-<i>service {tidal,qobuz,deezer,amazon}</i><br>
-Specify the music service to use for downloading FLAC files. Specify multiple services separated by spaces to try them in order. Default is 'tidal'.<br><br>
-<i>filename-format "{title}, {artist}, {album}, {track_number}, {track}, {date}, {year}, {position}, {isrc}, {duration}"</i><br>
-Specify the format for naming downloaded files. U can customize the name by adding the options listed above. Example: --filename-format "{year} - {album}/{track}. {title} - {artist}". Default is "{title} {artist}".<br><br>
-<i>use-artist-subfolders</i><br>
-Organize downloaded files into subfolders by artist.<br><br>
-<i>use-album-subfolders</i><br>
-Organize downloaded files into subfolders by album.<br><br>
-<i>loop minutes</i><br>
-Specify the duration in minutes to keep retrying downloads in case of failures. Default is 0 (no retries).<br>
+<h1>SpotiFLAC Python Module</h1>
+<p>Integrate SpotiFLAC directly into your Python projects. Perfect for building custom telegram bots, automation tools, or web interfaces. <br> Also available as a <a href="https://github.com/jelte1/SpotiFLAC-Command-Line-Interface">CLI tool</a>.</p>
+
+<h2>Function Signature</h2>
+<pre>
+from SpotiFLAC import SpotiFLAC
+
+SpotiFLAC(
+    url: str,
+    output_dir: str,
+    services: list = ["tidal", "deezer", "qobuz", "amazon"],
+    filename_format: str = "{title} - {artist}",
+    use_track_numbers: bool = False,
+    use_artist_subfolders: bool = False,
+    use_album_subfolders: bool = False,
+    loop: int = None
+)
+</pre>
+
+<h2>Parameters</h2>
+<i>url (str)</i><br>
+The Spotify URL (Track, Album, or Playlist) you want to download.<br><br>
+
+<i>output_dir (str)</i><br>
+The directory path where the files will be saved.<br><br>
+
+<i>services (list)</i><br>
+A list of strings specifying which services to use and the priority order. <br>
+Options: <code>"tidal"</code>, <code>"qobuz"</code>, <code>"deezer"</code>, <code>"amazon"</code>.<br>
+Example: <code>["qobuz", "tidal"]</code>.<br><br>
+
+<i>filename_format (str)</i><br>
+Specify the format for naming downloaded files. Available placeholders:<br>
+<code>{title}, {artist}, {album}, {track}, {date}, {year}, {position}, {isrc}, {duration}</code>.<br>
+Default is <code>"{title} - {artist}"</code>.<br><br>
+
+<i>use_artist_subfolders (bool)</i><br>
+Set to <code>True</code> to organize downloaded files into subfolders by artist.<br><br>
+
+<i>use_album_subfolders (bool)</i><br>
+Set to <code>True</code> to organize downloaded files into subfolders by album.<br><br>
+
+<i>loop (int)</i><br>
+Specify the duration in minutes to keep retrying downloads in case of failures. Default is <code>None</code> (no retries).<br>
+
 <h3>Example usage:</h3>
-
-```bash
-python3 launcher.py "https://open.spotify.com/album/xyz" "/path/to/output_dir" --filename-format "[{year}] {album} - {track_number} {title}" --service qobuz --use-artist-subfolders --use-album-subfolders --loop 120
-```
-
-<h2>CLI program usage</h2>
-<p>Program can be downloaded for <b>Windows</b>, <b>Linux (x86 and ARM)</b> and <b>MacOS</b>. The downloads are available under the releases.<br>
-Program can also be ran by downloading the python files and calling <code>python launcher.py</code> with the arguments.</p>
-
-<h4>Windows example usage:</h4>
-
-```bash
-./SpotiFLAC-Windows.exe [url]
-                        [output_dir]
-                        [--service tidal qobuz deezer amazon]
-                        [--filename-format "{title} - {artist}"]
-                        [--use-track-numbers] [--use-artist-subfolders]
-                        [--use-album-subfolders]
-                        [--loop minutes]
-```
-
-<h4>Linux / Mac example usage:</h4>
-
-```bash
-chmod +x SpotiFLAC-Linux-arm64
-./SpotiFLAC-Linux-arm64 [url]
-                        [output_dir]
-                        [--service tidal qobuz deezer amazon]
-                        [--filename-format "{title} - {artist}"]
-                        [--use-track-numbers] [--use-artist-subfolders]
-                        [--use-album-subfolders]
-                        [--loop minutes]
-```
-
-<h2>Python Module Usage</h2>
-<p>The program is now also available as a Python module:</p>
-
-```bash
+<pre>
 from SpotiFLAC import SpotiFLAC
 
+# Simple Download
 SpotiFLAC(
-    url,
-    output_dir,
-    services=["tidal", "deezer", "qobuz", "amazon"],
-    filename_format="{title}, {artist}",
-    use_track_numbers=False,
-    use_artist_subfolders=False,
-    use_album_subfolders=False,
-    loop=None
+    url="https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT",
+    output_dir="./downloads"
 )
-```
 
-<h3>Example</h3>
-
-```bash
-from SpotiFLAC import SpotiFLAC
-
+# Advanced Configuration
 SpotiFLAC(
-    url="https://open.spotify.com/album/xyz",
-    output_dir="/path/to/output_dir",
-    services=["tidal", "deezer"],
-    filename_format="{title}, {artist}",
-    use_track_numbers=True,
+    url="https://open.spotify.com/album/41MnTivkwTO3UUJ8DrqEJJ",
+    output_dir="./MusicLibrary",
+    services=["qobuz", "amazon", "tidal"],
+    filename_format="{year} - {album}/{track}. {title}",
     use_artist_subfolders=True,
-    use_album_subfolders=True,
-    loop=120
+    use_album_subfolders=True
 )
-
-```
+</pre>
