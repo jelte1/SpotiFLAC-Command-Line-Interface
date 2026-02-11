@@ -25,7 +25,7 @@ class Config:
     is_playlist: bool = False
     is_single_track: bool = False
     album_or_playlist_name: str = ""
-    tracks: list = field(default_factory=list) 
+    tracks: list = field(default_factory=list)
     worker: object = None
     loop: int = 3600
     start_time: float = 0.0
@@ -38,21 +38,19 @@ class Track:
     title: str
     artists: str
     album: str
+    album_artist: str # NOVO CAMPO
     track_number: int
     duration_ms: int
     id: str
     isrc: str = ""
     release_date: str = ""
-    # NEW SYSTEM COVERS FOR AMAZON AND QOBUZ (ONLY AUDIO SOURCES)
     cover_url: str = ""
     downloaded: bool = False
 
 
-# Extract cover art URL supporting both list (Spotify API) and string (processed getMetadata)
+# --- FUNÇÕES AUXILIARES ---
+
 def extract_cover_art(data, key_primary="images", key_secondary="album"):
-    """
-    Extrai a URL da imagem suportando listas (API Spotify) e strings (getMetadata processado).
-    """
     img_data = data.get(key_primary)
     
     if img_data and isinstance(img_data, str):
@@ -63,13 +61,18 @@ def extract_cover_art(data, key_primary="images", key_secondary="album"):
             return img_data[0].get("url", "")
         if isinstance(img_data[0], str):
             return img_data[0]
-        
+
     if key_secondary and key_secondary in data:
         album_data = data[key_secondary]
         if isinstance(album_data, dict):
             return extract_cover_art(album_data, "images", None)
             
     return ""
+
+def format_artists(artists_list):
+    if isinstance(artists_list, list):
+        return ", ".join([a.get("name", "Unknown") if isinstance(a, dict) else str(a) for a in artists_list])
+    return str(artists_list) if artists_list else "Unknown Artist"
 
 
 def get_metadata(url):
@@ -131,23 +134,25 @@ def handle_track_metadata(track_data):
         print("[!] Skipping track without ID")
         return
 
-    # Extração de Capa
     cover = extract_cover_art(track_data)
     if cover:
         print(f"[DEBUG] Cover found for track: {cover[:30]}...")
 
-    # Artistas
-    artists_list = track_data.get("artists", [])
-    if isinstance(artists_list, list):
-        artist_names = ", ".join([a.get("name", "Unknown") if isinstance(a, dict) else str(a) for a in artists_list])
+    artist_names = format_artists(track_data.get("artists", []))
+    
+    # Tenta pegar o artista do álbum. Se falhar, usa o artista da faixa.
+    album_obj = track_data.get("album", {})
+    if isinstance(album_obj, dict) and album_obj.get("artists"):
+        album_artist = format_artists(album_obj.get("artists"))
     else:
-        artist_names = str(artists_list)
+        album_artist = artist_names
 
     track = Track(
         external_urls=f"https://open.spotify.com/track/{track_id}",
         title=track_data.get("name", "Unknown Title"),
         artists=artist_names,
         album=track_data.get("album_name", track_data.get("album", {}).get("name", "Unknown Album")),
+        album_artist=album_artist,
         track_number=track_data.get("track_number", 1),
         duration_ms=track_data.get("duration_ms", 0),
         id=track_id,
@@ -164,8 +169,21 @@ def handle_track_metadata(track_data):
 
 def handle_album_metadata(album_data):
     config.album_or_playlist_name = album_data.get("album_info", {}).get("name", album_data.get("name", "Unknown Album"))
+    
+    # Data de lançamento do álbum
     album_release_date = album_data.get("album_info", {}).get("release_date", album_data.get("release_date", ""))
     
+    # Artista do Álbum (Geralmente no topo do objeto album)
+    raw_album_artists = album_data.get("album_info", {}).get("artists", [])
+    if not raw_album_artists:
+         raw_album_artists = album_data.get("artists", [])
+    
+    # Se raw_album_artists for string (já formatada), usa direto, senão formata
+    if isinstance(raw_album_artists, str):
+        main_album_artist = raw_album_artists
+    else:
+        main_album_artist = format_artists(raw_album_artists)
+
     album_cover = extract_cover_art(album_data.get("album_info", album_data))
     
     tracks_raw = album_data.get("track_list", album_data.get("tracks", {}).get("items", []))
@@ -184,17 +202,14 @@ def handle_album_metadata(album_data):
         if not track_cover:
             track_cover = album_cover
 
-        artists_list = track.get("artists", [])
-        if isinstance(artists_list, list):
-            artist_names = ", ".join([a.get("name", "Unknown") if isinstance(a, dict) else str(a) for a in artists_list])
-        else:
-            artist_names = str(artists_list)
+        artist_names = format_artists(track.get("artists", []))
 
         config.tracks.append(Track(
             external_urls=f"https://open.spotify.com/track/{track_id}",
             title=track.get("name", "Unknown Title"),
             artists=artist_names,
             album=config.album_or_playlist_name,
+            album_artist=main_album_artist, # Usa o artista do álbum extraído acima
             track_number=track.get("track_number", 0),
             duration_ms=track.get("duration_ms", 0),
             id=track_id,
@@ -234,22 +249,30 @@ def handle_playlist_metadata(playlist_data):
         if not track_cover:
             track_cover = playlist_cover
         
-        artists_list = track.get("artists", [])
-        if isinstance(artists_list, list):
-            artist_names = ", ".join([a.get("name", "Unknown") if isinstance(a, dict) else str(a) for a in artists_list])
+        artist_names = format_artists(track.get("artists", []))
+        
+        # Pega album artist e release date do objeto album aninhado na track
+        alb = track.get("album", {})
+        album_name = alb.get("name", track.get("album_name", "Unknown Album"))
+        
+        if alb.get("artists"):
+            album_artist = format_artists(alb.get("artists"))
         else:
-            artist_names = str(artists_list)
+            album_artist = artist_names # Fallback
+
+        release_date = alb.get("release_date", "")
 
         config.tracks.append(Track(
             external_urls=f"https://open.spotify.com/track/{track_id}",
             title=track.get("name", "Unknown Title"),
             artists=artist_names,
-            album=track.get("album", {}).get("name", track.get("album_name", "Unknown Album")),
+            album=album_name,
+            album_artist=album_artist,
             track_number=track.get("track_number", len(config.tracks) + 1),
             duration_ms=track.get("duration_ms", 0),
             id=track_id,
             isrc=track.get("isrc", ""),
-            release_date=track.get("album", {}).get("release_date", ""),
+            release_date=release_date,
             cover_url=track_cover
         ))
 
@@ -505,15 +528,17 @@ class DownloadWorker:
                             downloaded_file = downloader.download_by_isrc(
                                 isrc=track.isrc,
                                 output_dir=track_outpath,
-                                quality="6", # 6 = 16-bit FLAC
-                                filename_format=self.filename_format.replace("{title}", "temp_qobuz").replace("{artist}", "temp"), # Temp name
+                                quality="6",
+                                filename_format=self.filename_format.replace("{title}", "temp_qobuz").replace("{artist}", "temp"),
                                 include_track_number=False,
                                 position=track.track_number or i + 1,
                                 spotify_track_name=track.title,
                                 spotify_artist_name=track.artists,
                                 spotify_album_name=track.album,
+                                spotify_album_artist=track.album_artist,
+                                spotify_release_date=track.release_date, 
                                 use_album_track_number=self.use_track_numbers,
-                                spotify_cover_url=track.cover_url  # <--- PASSANDO A CAPA
+                                spotify_cover_url=track.cover_url
                             )
 
                         # --- AMAZON ---
@@ -521,14 +546,16 @@ class DownloadWorker:
                             downloaded_file = downloader.download_by_spotify_id(
                                 spotify_track_id=track.id,
                                 output_dir=track_outpath,
-                                filename_format="temp_amazon", # Temp name
+                                filename_format="temp_amazon",
                                 include_track_number=self.use_track_numbers,
                                 position=track.track_number or i + 1,
                                 spotify_track_name=track.title,
                                 spotify_artist_name=track.artists,
                                 spotify_album_name=track.album,
+                                spotify_album_artist=track.album_artist, 
+                                spotify_release_date=track.release_date, 
                                 use_album_track_number=self.use_track_numbers,
-                                spotify_cover_url=track.cover_url # <--- PASSANDO A CAPA
+                                spotify_cover_url=track.cover_url
                             )
 
                         if downloaded_file and os.path.exists(downloaded_file):
