@@ -8,6 +8,16 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version_tag:
+        description: 'Nome da versão para criar a Release (ex: v1.0.0)'
+        required: true
+        type: string
+      changelog:
+        description: 'Changelog / O que há de novo nessa versão?'
+        required: false
+        type: string
+        default: 'Atualizações gerais e correções de bugs.'
 
 jobs:
   build:
@@ -81,6 +91,7 @@ jobs:
             pyinstaller --onefile --name '${{ matrix.build_name }}' --console ../launcher.py
           "
 
+    # Salva o arquivo gerado por cada máquina em um artefato temporário
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
@@ -89,38 +100,41 @@ jobs:
         retention-days: 1
 
   release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    
-    steps:
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: bin-*
-          path: release-files
-          merge-multiple: true
+      needs: build
+      runs-on: ubuntu-latest
+      if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+      
+      steps:
+        - name: Download all build artifacts
+          uses: actions/download-artifact@v4
+          with:
+            pattern: bin-*
+            path: release-files
+            merge-multiple: true
 
+        - name: Create GitHub Release
+          uses: softprops/action-gh-release@v2
+          with:
+            tag_name: ${{ github.event.inputs.version_tag || github.ref_name }}
+            files: release-files/*
+            draft: false
+            prerelease: false
+            body: |
+              ## Changelog
+              ${{ github.event.inputs.changelog || 'Nova versão lançada via Git Tag.' }}
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2 
-        with:
-          files: release-files/*
-          draft: false
-          prerelease: false
-          body: |
-            ## Downloads
-            
-            - **Windows (x86_64)**: SpotiFLAC-Windows.exe
-            - **macOS (x86_64)**: SpotiFLAC-macOS
-            - **Linux x86_64**: SpotiFLAC-Linux-x86_64
-            - **Linux ARM64**: SpotiFLAC-Linux-arm64
+              ## Downloads
+              
+              - **Windows (x86_64)**: SpotiFLAC-Windows.exe
+              - **macOS (x86_64)**: SpotiFLAC-macOS
+              - **Linux x86_64**: SpotiFLAC-Linux-x86_64
+              - **Linux ARM64**: SpotiFLAC-Linux-arm64
 
-            ### Usage
-            ```bash
-            chmod +x SpotiFLAC-Linux-*
-            ./SpotiFLAC-Linux-x86_64 --service tidal [url] ./out
-            ./SpotiFLAC-Linux-arm64  --service tidal [url] ./out
-            ```
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              ### Usage
+              ```bash
+              chmod +x SpotiFLAC-Linux-*
+              ./SpotiFLAC-Linux-x86_64 --service tidal [url] ./out
+              ./SpotiFLAC-Linux-arm64  --service tidal [url] ./out
+              ```
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
