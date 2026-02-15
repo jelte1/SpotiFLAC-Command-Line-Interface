@@ -13,11 +13,6 @@ on:
         description: 'Nome da versão para criar a Release (ex: v1.0.0)'
         required: true
         type: string
-      changelog:
-        description: 'Changelog / O que há de novo nessa versão?'
-        required: false
-        type: string
-        default: 'Atualizações gerais e correções de bugs.'
 
 jobs:
   build:
@@ -117,11 +112,10 @@ jobs:
           with:
             tag_name: ${{ github.event.inputs.version_tag || github.ref_name }}
             files: release-files/*
-            draft: false
+            draft: true
             prerelease: false
             body: |
               ## Changelog
-              ${{ github.event.inputs.changelog || 'Nova versão lançada via Git Tag.' }}
 
               ## Downloads
               
